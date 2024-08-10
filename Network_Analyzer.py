@@ -208,34 +208,49 @@ class NetworkTrafficAnalyzer:
         return time.strftime("%Y-%m-%d %H:%M:%S", time.localtime())
 
     def format_packet_details(self, packet):
-        if Raw in packet:
-            return packet[Raw].load.decode(errors='ignore')
-        return "No payload"
+        details = ""
+        if IP in packet:
+            details += f"Source: {packet[IP].src}\n"
+            details += f"Destination: {packet[IP].dst}\n"
+            if TCP in packet:
+                details += f"Source Port: {packet[TCP].sport}\n"
+                details += f"Destination Port: {packet[TCP].dport}\n"
+            elif UDP in packet:
+                details += f"Source Port: {packet[UDP].sport}\n"
+                details += f"Destination Port: {packet[UDP].dport}\n"
+            if Raw in packet:
+                details += f"Data: {packet[Raw].load}\n"
+        return details
 
     def on_packet_click(self, event):
-        item = self.packet_table.selection()
-        if item:
-            selected_packet = self.packet_table.item(item, "values")
-            if selected_packet:
-                packet_number = int(selected_packet[0]) - 1
-                if 0 <= packet_number < len(self.packet_details):
-                    packet_info = self.packet_details[packet_number]
-                    details = (
-                        f"Source IP: {packet_info['src_ip']}\n"
-                        f"Destination IP: {packet_info['dst_ip']}\n"
-                        f"Protocol: {packet_info['protocol']}\n"
-                        f"Geolocation: {packet_info['geolocation']}\n"
-                        f"Timestamp: {packet_info['timestamp']}\n"  # Display timestamp
-                        f"Info: {packet_info['info']}"
-                    )
-                    self.log_text.delete(1.0, tk.END)
-                    self.log_text.insert(tk.END, details)
+        selected_item = self.packet_table.selection()
+        if selected_item:
+            packet_index = int(self.packet_table.item(selected_item)["values"][0]) - 1
+            if 0 <= packet_index < len(self.packet_details):
+                packet_info = self.packet_details[packet_index]
+                details = f"Packet Number: {packet_index + 1}\n" \
+                          f"Time: {self.get_time()}\n" \
+                          f"Source IP: {packet_info['src_ip']}\n" \
+                          f"Destination IP: {packet_info['dst_ip']}\n" \
+                          f"Protocol: {packet_info['protocol']}\n" \
+                          f"Geolocation: {packet_info['geolocation']}\n" \
+                          f"Info:\n{packet_info['info']}"
+                self.log_text.delete(1.0, tk.END)
+                self.log_text.insert(tk.END, details)
 
     def save_log(self):
         file_path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text files", "*.txt")])
         if file_path:
             with open(file_path, "w") as file:
-                file.write(self.log_text.get(1.0, tk.END))
+                for packet_info in self.packet_details:
+                    file.write(f"Number: {len(self.packet_details)}\n")
+                    file.write(f"Time: {self.get_time()}\n")
+                    file.write(f"Source IP: {packet_info['src_ip']}\n")
+                    file.write(f"Destination IP: {packet_info['dst_ip']}\n")
+                    file.write(f"Protocol: {packet_info['protocol']}\n")
+                    file.write(f"Geolocation: {packet_info['geolocation']}\n")
+                    file.write(f"Info: {packet_info['info']}\n")
+                    file.write("="*40 + "\n")
 
     def on_closing(self):
         if self.capture_running:

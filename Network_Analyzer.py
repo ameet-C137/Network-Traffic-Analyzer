@@ -113,12 +113,16 @@ class NetworkTrafficAnalyzer:
         if self.capture_running:
             self.capture_running = False
             self.log("Stopping capture...")
-            time.sleep(1)
-            if self.capture_thread.is_alive():
-                self.capture_thread.join()
-            self.log("Capture stopped.")
+
+            self.check_thread_stopped()
         else:
             self.log("Capture is not running.")
+
+    def check_thread_stopped(self):
+        if self.capture_thread.is_alive():
+            self.root.after(100, self.check_thread_stopped)
+        else:
+            self.log("Capture stopped.")
 
     def log(self, message):
         self.log_text.insert(tk.END, message + "\n")
